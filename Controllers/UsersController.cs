@@ -1,7 +1,13 @@
 ﻿using gsa_api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration.UserSecrets;
+using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -14,7 +20,14 @@ namespace gsa_api.Controllers
     public class UsersController : ControllerBase
     {
         private readonly GsaContext dbc;
-        public UsersController(GsaContext _context) { dbc = _context; }
+        private readonly TokenBlacklister tokenBlacklister;
+        private readonly IConfiguration config;
+        public UsersController(GsaContext _context, IConfiguration conf, TokenBlacklister blacklister)
+        {
+            dbc = _context;
+            config = conf;
+            tokenBlacklister = blacklister;
+        }
 
 
         // POST api/<UsersController>
@@ -66,6 +79,7 @@ namespace gsa_api.Controllers
                 var dbUser = dbc.Users.First(u => u.Email == user.Email);
                 Debug.WriteLine(dbUser.PasswordHash);
                 Debug.WriteLine(hashSHA256(user.Password));
+                Debug.WriteLine(hashSHA256Equal(user.Password, dbUser.PasswordHash));
                 if(!hashSHA256Equal(user.Password, dbUser.PasswordHash))
                 {
                     return Results.Json(new { message = "Invalid email or password." }, statusCode: 401);
@@ -73,13 +87,54 @@ namespace gsa_api.Controllers
                 return Results.Ok(new
                 {
                     message = "Login successful!",
-                    data = new { userId = dbUser.Id, username = dbUser.Username, role = dbUser.Role, token = "..." }
+                    data = new { userId = dbUser.Id, username = dbUser.Username, role = dbUser.Role, token = GenerateToken(dbUser.Id.ToString(), dbUser.Email) }
                 });
             } else
             {
                 return Results.StatusCode(400);
             }
         }
+
+        [HttpPost("logout")]
+        public IResult Logout()
+        {
+            if(User is not null)
+            {
+                var tokId = User.FindFirstValue(JwtRegisteredClaimNames.Jti) ?? "0";
+                tokenBlacklister.BlacklistToken(tokId);
+                return Results.Json(new {message = "Logout successful."});
+            }
+            return Results.Json(new {message = "Authorization token missing or invalid." }, statusCode: 401);
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public IResult Me()
+        {
+            return Results.Ok();
+        }
+
+        public string GenerateToken(string userId, string email)
+        {
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId),
+                new Claim(JwtRegisteredClaimNames.Name, email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: config["Jwt:Issuer"],
+                audience: config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddDays(7),
+                signingCredentials: creds
+            );
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        } 
 
         public static string hashSHA256(string input)
         {
@@ -96,8 +151,7 @@ namespace gsa_api.Controllers
         public static bool hashSHA256Equal(string input, string hashedStr)
         {
             var hashedInput = hashSHA256(input);
-            var comparer = StringComparer.FromComparison(StringComparison.OrdinalIgnoreCase);
-            return comparer.Compare(input, hashedStr) == 0;
+            return StringComparer.OrdinalIgnoreCase.Compare(hashedInput, hashedStr) == 0;
         }
     }
 
