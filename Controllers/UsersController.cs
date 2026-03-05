@@ -1,8 +1,6 @@
 ﻿using gsa_api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -38,19 +36,19 @@ namespace gsa_api.Controllers
             {
                 if(!new EmailAddressAttribute().IsValid(user.Email))
                 {
-                    return Results.Json(new { message = "Email not valid." }, statusCode: 422);
+                    return Helper.errMessage("Email not valid.");
                 }
                 if(dbc.Users.Any(u => u.Email == user.Email))
                 {
-                    return Results.Json(new { message = "Email has been used." }, statusCode: 422);
+                    return Helper.errMessage("Email has been used.");
                 }
                 if(!user.Password.Any(Char.IsDigit) || !user.Password.Any(Char.IsLetter) || !user.Password.Any(c => !Char.IsLetter(c) && !Char.IsDigit(c)))
                 {
-                    return Results.Json(new { message = "Password must contains combination of letter, number and symbol." }, statusCode: 422);
+                    return Helper.errMessage("Password must contains combination of letter, number and symbol.");
                 }
                 if(user.Password.Length < 8)
                 {
-                    return Results.Json(new { message = "Password length must be greater or equal than 8 characters." }, statusCode: 422);
+                    return Helper.errMessage("Password length must be greater or equal than 8 characters.");
                 }
                 user.Password = hashSHA256(user.Password);
                 dbc.Users.Add(user.toUser());
@@ -70,11 +68,11 @@ namespace gsa_api.Controllers
             {
                 if (!new EmailAddressAttribute().IsValid(user.Email))
                 {
-                    return Results.Json(new { message = "Email not valid." }, statusCode: 422);
+                    return Helper.errMessage("Email not valid.");
                 }
                 if (!dbc.Users.Any(u => u.Email == user.Email))
                 {
-                    return Results.Json(new { message = "Invalid email or password." }, statusCode: 401);
+                    return Helper.errMessage("Invalid email or password.", 401);
                 }
                 var dbUser = dbc.Users.First(u => u.Email == user.Email);
                 Debug.WriteLine(dbUser.PasswordHash);
@@ -82,7 +80,7 @@ namespace gsa_api.Controllers
                 Debug.WriteLine(hashSHA256Equal(user.Password, dbUser.PasswordHash));
                 if(!hashSHA256Equal(user.Password, dbUser.PasswordHash))
                 {
-                    return Results.Json(new { message = "Invalid email or password." }, statusCode: 401);
+                    return Helper.errMessage("Invalid email or password.", 401);
                 }
                 return Results.Ok(new
                 {
@@ -104,7 +102,7 @@ namespace gsa_api.Controllers
                 tokenBlacklister.BlacklistToken(tokId);
                 return Results.Json(new {message = "Logout successful."});
             }
-            return Results.Json(new {message = "Authorization token missing or invalid." }, statusCode: 401);
+            return Helper.errMessage("Authorization token missing or invalid.", 401);
         }
 
         [HttpGet("me")]
