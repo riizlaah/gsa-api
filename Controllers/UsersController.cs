@@ -85,7 +85,7 @@ namespace gsa_api.Controllers
                 return Results.Ok(new
                 {
                     message = "Login successful!",
-                    data = new { userId = dbUser.Id, username = dbUser.Username, role = dbUser.Role, token = GenerateToken(dbUser.Id.ToString(), dbUser.Email) }
+                    data = new { userId = dbUser.Id, username = dbUser.Username, role = dbUser.Role, token = GenerateToken(dbUser.Id.ToString(), dbUser.Email, dbUser.Role) }
                 });
             } else
             {
@@ -112,13 +112,14 @@ namespace gsa_api.Controllers
             return Results.Ok();
         }
 
-        public string GenerateToken(string userId, string email)
+        public string GenerateToken(string userId, string email, string role)
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim(JwtRegisteredClaimNames.Name, email),
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(ClaimTypes.Email, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.Role, role),
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]));

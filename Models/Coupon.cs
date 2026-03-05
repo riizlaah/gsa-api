@@ -19,3 +19,19 @@ public partial class Coupon
 
     public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
 }
+
+public class CouponInput
+{
+    public string couponCode { get; set; } = null!;
+
+    public decimal discountValue { get; set; }
+
+    public int quota { get; set; }
+
+    public DateTime expiryDate { get; set; }
+
+    public Coupon toCoupon()
+    {
+        return new Coupon { Code = couponCode, DiscountPct = discountValue, Quota = quota, ExpiryDate = expiryDate};
+    }
+}

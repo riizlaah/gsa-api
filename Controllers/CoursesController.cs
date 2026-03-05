@@ -73,7 +73,7 @@ namespace gsa_api.Controllers
             {
                 return Helper.errMessage("Validation error: 'courseId' must be a numeric.");
             }
-            var course = dbc.Courses.Include(c => c.Modules).Select(c => new {c.Id, c.Title, c.Description, c.Price, duration = $"{c.Duration} minutes", modules = c.Modules.Select(m => m.Title)}).FirstOrDefault(c => c.Id == courseId);
+            var course = dbc.Courses.Include(c => c.Modules).Select(c => new {c.Id, c.Title, c.Description, c.Price, duration = c.DurationStr, modules = c.Modules.Select(m => m.Title)}).FirstOrDefault(c => c.Id == courseId);
             if(course is null)
             {
                 return Helper.errMessage("Course not found.", 404);
@@ -97,7 +97,7 @@ namespace gsa_api.Controllers
             {
                 return Helper.errMessage("Validation error: 'paymentMethod' must be 'card' or 'credit_card' or 'paypal'.");
             }
-            var course = dbc.Courses.Include(c => c.Modules).Select(c => new { c.Id, c.Title, c.Description, c.Price, duration = $"{c.Duration} minutes", modules = c.Modules.Select(m => m.Title) }).FirstOrDefault(c => c.Id == courseId);
+            var course = dbc.Courses.Include(c => c.Modules).Select(c => new { c.Id, c.Title, c.Description, c.Price, duration = c.DurationStr, modules = c.Modules.Select(m => m.Title) }).FirstOrDefault(c => c.Id == courseId);
             if (course is null)
             {
                 return Helper.errMessage("Course not found.", 404);
