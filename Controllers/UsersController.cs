@@ -112,7 +112,7 @@ namespace gsa_api.Controllers
             return Results.Ok();
         }
 
-        public string GenerateToken(string userId, string email, string role)
+        private string GenerateToken(string userId, string email, string role)
         {
             var claims = new[]
             {
@@ -135,7 +135,7 @@ namespace gsa_api.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         } 
 
-        public static string hashSHA256(string input)
+        private static string hashSHA256(string input)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
@@ -147,7 +147,7 @@ namespace gsa_api.Controllers
             }
         }
 
-        public static bool hashSHA256Equal(string input, string hashedStr)
+        private static bool hashSHA256Equal(string input, string hashedStr)
         {
             var hashedInput = hashSHA256(input);
             return StringComparer.OrdinalIgnoreCase.Compare(hashedInput, hashedStr) == 0;

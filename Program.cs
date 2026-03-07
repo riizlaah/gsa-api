@@ -43,17 +43,15 @@ builder.Services.AddAuthentication().AddJwtBearer(options =>
     };
 });
 builder.Services.AddAuthorization();
-
 builder.Services.AddDbContext<GsaContext>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    //app.UseS
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 //app.UseHttpsRedirection();
 
